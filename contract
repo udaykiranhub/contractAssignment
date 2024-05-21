@@ -1,0 +1,70 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.0;
+
+contract Voting {
+    struct Proposal {
+        string name;   // name of the proposal
+        uint voteCount; // number of accumulated votes
+    }
+
+    struct Voter {
+        bool hasVoted; // if true, that person already voted
+        uint vote;     // index of the voted proposal
+    }
+
+    address public chairperson;
+    mapping(address => Voter) public voters;
+    Proposal[] public proposals;
+
+    // Modifier to check if the caller is the chairperson
+    modifier onlyChairperson() {
+        require(msg.sender == chairperson, "Only chairperson can call this function.");
+        _;
+    }
+
+    // Create a new voting session with proposals
+    constructor(string[] memory proposalNames) {
+        chairperson = msg.sender;
+        for (uint i = 0; i < proposalNames.length; i++) {
+            proposals.push(Proposal({
+                name: proposalNames[i],
+                voteCount: 0
+            }));
+        }
+    }
+
+    // Function to give a voter the right to vote
+    function giveRightToVote(address voter) public onlyChairperson {
+        require(!voters[voter].hasVoted, "The voter already voted.");
+        voters[voter].hasVoted = false;
+    }
+
+    // Function to cast a vote
+    function vote(uint proposal) public {
+        Voter storage sender = voters[msg.sender];
+        require(!sender.hasVoted, "You have already voted.");
+        require(proposal < proposals.length, "Invalid proposal index.");
+        
+        sender.hasVoted = true;
+        sender.vote = proposal;
+
+        // Increase the vote count of the proposal
+        proposals[proposal].voteCount += 1;
+    }
+
+    // Function to get the winning proposal
+    function winningProposal() public view returns (uint winningProposal_) {
+        uint winningVoteCount = 0;
+        for (uint i = 0; i < proposals.length; i++) {
+            if (proposals[i].voteCount > winningVoteCount) {
+                winningVoteCount = proposals[i].voteCount;
+                winningProposal_ = i;
+            }
+        }
+    }
+
+    // Function to get the name of the winning proposal
+    function winnerName() public view returns (string memory winnerName_) {
+        winnerName_ = proposals[winningProposal()].name;
+    }
+}
